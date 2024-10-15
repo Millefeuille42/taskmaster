@@ -22,5 +22,5 @@ type program_config = struct {
     stop_signal: signal::sig,
     stdout: (path::buffer | exec::nullfd),
     stderr: (path::buffer | exec::nullfd),
-    umask: fs::stat_mask,
+    umask: fs::mode,
 };
