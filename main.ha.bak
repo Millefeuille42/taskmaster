@@ -1,0 +1,122 @@
+use fmt;
+use os::exec;
+use time;
+
+fn child() void = {
+	fmt::println("I'm a child process!")!;
+	fmt::println("I wanna be a cat 😺!")!;
+
+	// time::sleep(4 * time::SECOND);
+	// let cmd: exec::command = exec::cmd("cat", "cat.txt")!;
+	// exec::exec(&cmd);
+
+	let cmd: exec::command = exec::cmd("cat")!;
+	match (exec::start(&cmd)) {
+	case let process: exec::process => {
+		fmt::printfln("Waiting for command!")!;
+		exec::wait(&process)!;
+		fmt::printfln("\nCommand finished!")!;
+	};
+	case let error: exec::error =>
+		fmt::fatalf("Error starting command");
+	};
+};
+
+export fn main() void = {
+	fmt::println("Hello world!")!;
+
+	match (exec::fork()) {
+	case let process: exec::process => {
+		fmt::printfln("I'm a parent process, my child's pid is {}", process: uint)!;
+		fmt::printfln("Waiting for my child!")!;
+		exec::wait(&process)!;
+		fmt::printfln("\nChild died 😔")!;
+	};
+	case =>
+		child();
+	case let error: exec::error =>
+		fmt::fatalf("Error forking");
+	};
+};
+
+////////////////////////////////////////////////////////////////////////////////
+fn shared_memory_test() void = {
+	// create global shared memory
+	// gives a file handled that can be used to lock
+	let file = os::shm_open("shared", fs::flag::RDWR | fs::flag::CREATE,  fs::mode::USER_RWX | fs::mode::GROUP_RWX | fs::mode::OTHER_RWX)!;
+	io::trunc(file, 4096)!;
+	// let ptr = match(io::mmap(null, 4096, io::prot::READ | io::prot::WRITE, io::mflag::SHARED, file, 0)) {
+	// case let ptr: *opaque =>
+	//     yield ptr;
+	// case errors::error =>
+	//     fmt::fatalf("Error mapping memory");
+	// };
+
+	// let ptr_test = ptr: *[4096]u8;
+
+	// ptr_test[0] = 0;
+	// ptr_test[1] = 1;
+	// ptr_test[2] = 2;
+	// ptr_test[3] = 3;
+
+	// fmt::printfln("print item from slice {}", ptr_test[1])!;
+
+	match(exec::fork()) {
+	case let process: exec::process => {
+		let ptr = match(io::mmap(null, 4096, io::prot::READ | io::prot::WRITE, io::mflag::SHARED, file, 0)) {
+		case let ptr: *opaque =>
+			yield ptr;
+		case errors::error =>
+			fmt::fatalf("Error mapping memory");
+		};
+
+		let ptr_test = ptr: *[4096]u8;
+
+
+		fmt::printfln("Parent locking!")!;
+		io::lock(file, true, io::lockop::EXCLUSIVE)!;
+		fmt::printfln("Parent locked!")!;
+
+		time::sleep(time::SECOND * 3);
+		fmt::printfln("Parent aaaaaa")!;
+		ptr_test[1] = 42;
+		fmt::printfln("print item from slice {}", ptr_test[1])!;
+
+		fmt::printfln("Parent unlocking!")!;
+		io::lock(file, true, io::lockop::UNLOCK)!;
+		exec::wait(&process)!;
+		io::munmap(ptr, 4096)!;
+	};
+	case => {
+		time::sleep(time::SECOND / 2);
+
+		let ptr = match(io::mmap(null, 4096, io::prot::READ | io::prot::WRITE, io::mflag::SHARED, file, 0)) {
+		case let ptr: *opaque =>
+			yield ptr;
+		case errors::error =>
+			fmt::fatalf("Error mapping memory");
+		};
+
+		let ptr_test = ptr: *[4096]u8;
+
+		fmt::printfln("Child locking!")!;
+		io::lock(file, true, io::lockop::EXCLUSIVE)!;
+		fmt::printfln("Child locked!")!;
+
+		time::sleep(time::SECOND * 2);
+		fmt::printfln("print item from slice {}", ptr_test[1])!;
+		ptr_test[1] = 2;
+
+		fmt::printfln("Child unlocking!")!;
+		io::lock(file, true, io::lockop::UNLOCK)!;
+		io::munmap(ptr, 4096)!;
+		os::exit(1);
+	};
+	case let error: exec::error =>
+	   fmt::fatalf("Error forking");
+	};
+
+	// fmt::printfln("print item from slice {}", ptr_test[1])!;
+	// io::munmap(ptr, 4096)!;
+	os::shm_unlink("shared")!;
+};

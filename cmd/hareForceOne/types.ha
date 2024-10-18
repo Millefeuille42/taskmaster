@@ -45,3 +45,10 @@ fn new_program_config() program_config = {
         umask = fs::mode::UNKNOWN,
     };
 };
+
+type program_info = struct {
+    config: *program_config,
+    process: exec::process,
+    // start: time::instant,
+    restart: uint,
+};
