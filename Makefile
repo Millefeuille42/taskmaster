@@ -7,6 +7,7 @@ endif
 .POSIX:
 .SUFFIXES: .ha
 HARE=hare
+HAREFLAGS=
 
 DESTDIR=
 PREFIX=/usr/local
