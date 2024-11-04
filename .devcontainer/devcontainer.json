@@ -29,7 +29,10 @@
 				"ms-azuretools.vscode-docker",
 				"DavidAnson.vscode-markdownlint",
 				"streetsidesoftware.code-spell-checker",
-				"eamodio.gitlens",
+				"mhutchie.git-graph",
+				"oderwat.indent-rainbow",
+				"wayou.vscode-todo-highlight",
+				"chrmarti.regex",
 				"ms-vscode.makefile-tools",
 				"adotinthevoid.hare-highlighting"
 			]
