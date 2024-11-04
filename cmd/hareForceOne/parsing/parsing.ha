@@ -14,6 +14,8 @@ use unix::signal;
 use os::exec;
 use hfo_types;
 
+// TODO move regexes into a utils file
+
 const config_regex_str = "^\\s*(?:;|#).*$|^\\s*\\[\\s*([\\w _-]+?)\\s*\\]\\s*?(?:(?:;|#).*)?$|^\\s*([^=#;\\s]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^;\\s=#]+))\\s*?(?:(?:;|#).*)?$";
 const section_regex_str = "^[\r\n\t\f\v ]*\\[[\r\n\t\f\v ]*([a-zA-Z0-9 _-]+)[\r\n\t\f\v ]*\\][\r\n\t\f\v ]*$";
 
@@ -29,16 +31,30 @@ fn compile_regex(re_str: str) regex::regex = {
     };
 };
 
-fn parse_kv(line: *str, config: *hfo_types::raw_program_config) void = {
-    // FIXME make this global so it's not compiled every time
+fn get_regex(re: *(regex::regex|void), re_str: const *str) regex::regex = {
+    *re = match (*re) {
+        case let re: regex::regex => yield re;
+        case void => yield compile_regex(*re_str);
+    };
+    return *re as regex::regex;
+};
 
-    const kv_res: [3](str, regex::regex) = [
-        ("kv_regex_dq_str", compile_regex(kv_regex_dq_str)),
-        ("kv_regex_sq_str", compile_regex(kv_regex_sq_str)),
-        ("kv_regex_str", compile_regex(kv_regex_str))
+fn get_kv_regexes() [3](str, regex::regex) = {
+    static let kv_regex: (regex::regex|void) = void;
+    static let kv_regex_dq: (regex::regex|void) = void;
+    static let kv_regex_sq: (regex::regex|void) = void;
+
+    return [
+        ("kv_regex_dq_str", get_regex(&kv_regex_dq, &kv_regex_dq_str)),
+        ("kv_regex_sq_str", get_regex(&kv_regex_sq, &kv_regex_sq_str)),
+        ("kv_regex_str", get_regex(&kv_regex, &kv_regex_str))
     ];
-    
-    for (let kv_re .. kv_res) {
+};
+
+fn parse_kv(line: *str, config: *hfo_types::raw_program_config) void = {
+    const kv_regexes = get_kv_regexes();
+
+    for (let kv_re .. kv_regexes) {
         if (regex::test(&kv_re.1, *line)) {
             const result = regex::find(&kv_re.1, *line);
             defer regex::result_free(result);
@@ -62,14 +78,8 @@ fn parse_kv(line: *str, config: *hfo_types::raw_program_config) void = {
 fn parse_file(path: str) ([]hfo_types::program_config | fs::error) = {
     log::lprintfln(log::global, "reading: {}", path);
 
-    // FIXME make this global so it's not compiled every time
-    const section_re = match(regex::compile(section_regex_str)) {
-        case let err: regex::error =>
-            log::lprintfln(log::global, "{}", regex::strerror(err));
-            assert(false);
-            return [];
-        case let re: regex::regex => yield re;
-    };
+    static let s_section_re: (regex::regex|void) = void;
+    const section_re = get_regex(&s_section_re, &section_regex_str);
 
     const file = os::open(path)?;
     defer io::close(file)!;
