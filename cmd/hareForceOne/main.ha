@@ -183,6 +183,6 @@ export fn main() void = {
 		return;
 	};
 
-	shared_memory_test();
+	// shared_memory_test();
 	return;
 };
