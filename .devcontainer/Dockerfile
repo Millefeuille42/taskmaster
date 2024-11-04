@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim as devcontainer
+FROM debian:bookworm-slim AS devcontainer
 
 RUN groupadd -g 10001 devcontainer && \
    useradd -u 10000 -g devcontainer devcontainer \
@@ -9,7 +9,7 @@ RUN groupadd -g 10001 devcontainer && \
 
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y xz-utils net-tools vim curl wget git \
-    && apt-get install -y gcc clang valgrind make scdoc cmake autogen autoconf flex bison \
+    && apt-get install -y gcc valgrind make scdoc cmake autogen autoconf flex bison \
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/
@@ -17,26 +17,29 @@ RUN apt-get update && apt-get upgrade -y \
 WORKDIR /tmp
 
 RUN curl "https://c9x.me/compile/release/qbe-1.2.tar.xz" -Lo qbe.tar.xz \
-    && tar -xvf qbe.tar.xz
-RUN cd qbe-1.2 \
-    && make check \
-    && make install \
+    && tar -xvf qbe.tar.xz \
+    && cd qbe-1.2 \
+    && make -j$(nproc) \
+    && make -j$(nproc) check \
+    && make -j$(nproc) install \
     && rm -rf /tmp/qbe*
 
-RUN git clone "https://git.sr.ht/~sircmpwn/harec"
-RUN cd harec \
+RUN curl "https://git.sr.ht/~sircmpwn/harec/archive/0.24.2.tar.gz" -Lo harec.tar.gz \
+    && tar -xvf harec.tar.gz \
+    && cd harec-0.24.2 \
     && cp configs/linux.mk config.mk \
-    && make \
-    && make check \
-    && make install \
+    && make -j$(nproc) \
+    && make -j$(nproc) check \
+    && make -j$(nproc) install \
     && rm -rf /tmp/harec
 
-RUN git clone "https://git.sr.ht/~sircmpwn/hare" \
-    && cd hare \
+RUN curl "https://git.sr.ht/~sircmpwn/hare/archive/0.24.2.tar.gz" -Lo hare.tar.gz \
+    && tar -xvf hare.tar.gz \
+    && cd hare-0.24.2 \
     && cp configs/linux.mk config.mk \
-    && make \
-    && make check \
-    && make install \
+    && make -j$(nproc) \
+    && make -j$(nproc) check \
+    && make -j$(nproc) install \
     && rm -rf /tmp/hare
 
 WORKDIR /home/devcontainer
