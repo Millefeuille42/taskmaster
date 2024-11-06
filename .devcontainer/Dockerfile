@@ -1,11 +1,11 @@
 FROM debian:bookworm-slim AS devcontainer
 
-RUN groupadd -g 10001 devcontainer && \
-   useradd -u 10000 -g devcontainer devcontainer \
-   && mkdir -p /home/devcontainer \
-   && chown -R devcontainer:devcontainer /home/devcontainer \
-   && mkdir -p /workspaces \
-   && chown -R devcontainer:devcontainer /workspaces
+RUN groupadd -g 10001 devcontainer \
+    && useradd -u 10000 -g devcontainer devcontainer \
+    && mkdir -p /home/devcontainer \
+    && chown -R devcontainer:devcontainer /home/devcontainer \
+    && mkdir -p /workspaces \
+    && chown -R devcontainer:devcontainer /workspaces
 
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y xz-utils net-tools vim curl wget git \
