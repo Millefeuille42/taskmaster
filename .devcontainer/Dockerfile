@@ -31,7 +31,7 @@ RUN curl "https://git.sr.ht/~sircmpwn/harec/archive/0.24.2.tar.gz" -Lo harec.tar
     && make -j$(nproc) \
     && make -j$(nproc) check \
     && make -j$(nproc) install \
-    && rm -rf /tmp/harec
+    && rm -rf /tmp/harec*
 
 RUN curl "https://git.sr.ht/~sircmpwn/hare/archive/0.24.2.tar.gz" -Lo hare.tar.gz \
     && tar -xvf hare.tar.gz \
@@ -40,6 +40,6 @@ RUN curl "https://git.sr.ht/~sircmpwn/hare/archive/0.24.2.tar.gz" -Lo hare.tar.g
     && make -j$(nproc) \
     && make -j$(nproc) check \
     && make -j$(nproc) install \
-    && rm -rf /tmp/hare
+    && rm -rf /tmp/hare*
 
 WORKDIR /home/devcontainer
