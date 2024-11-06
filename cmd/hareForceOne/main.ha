@@ -8,6 +8,10 @@ use fs;
 use io;
 use errors;
 
+use cli;
+
+// use watcher;
+
 fn fill_test_struct() program_config = {
 	let config = program_config {
 		name = "echo",
@@ -183,6 +187,16 @@ export fn main() void = {
 		return;
 	};
 
-	// shared_memory_test();
+	let cli_process = cli::create();
+	// watcher::create();
+	// shared memory setup
+	// parse config
+	// store config in shared memory setup
+	// open unix socket
+
+	// listen socket
+	// parse exec stuff from cli
+	// format info
+	// send info back to cli
 	return;
 };

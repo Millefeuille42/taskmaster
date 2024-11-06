@@ -20,7 +20,7 @@ SRCS=$(shell find ./cmd/${NAME} -name '*.ha')
 all: $(NAME)
 
 $(NAME): $(SRCS)
-> $(HARE) build $(HAREFLAGS) -o $@ cmd/$@/
+> cd cmd/$@/ && $(HARE) build $(HAREFLAGS) -o $(PWD)/$@ .
 
 check:
 > $(HARE) test $(HAREFLAGS)
