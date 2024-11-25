@@ -15,6 +15,18 @@ const PROMPT = "hfo $> ";
 const NAME = "hareForceOne";
 const AUTHORS = "placeholder";
 
+const COMMAND_LIST =
+"Command list:
+  - status [TASK]...    Print status of TASK. With no TASK, print the status of every tasks.
+  - reload              Reload the configuration file.
+  - start TASK...       Start TASK.
+  - stop TASK...        Stop TASK.
+  - restart TASK...     Restart TASK.
+  - history             Print the command history of this shell session.
+  - exit                Close the shell, and stops all the tasks before exiting cleanly.
+  - help                Print this help message.
+";
+
 type error = !(io::error | utf8::invalid);
 
 type command_type = enum {
@@ -86,6 +98,7 @@ fn build_cmd(words: []str) command = {
 
 fn print_help() void = {
 	fmt::printfln("{} - by {}", NAME, AUTHORS)!;
+	fmt::printfln("{}", COMMAND_LIST)!;
 };
 
 fn cli_main() void = {
