@@ -68,6 +68,7 @@ fn build_cmd(words: []str) command = {
 	case "stop" => yield command_type::STOP;
 	case "restart" => yield command_type::RESTART;
 	case "history" => yield command_type::HISTORY;
+	case "exit" => yield command_type::EXIT;
 	case "help" => yield command_type::HELP;
 	case =>
 		log::lprintfln(log::global,
@@ -105,6 +106,8 @@ fn cli_main() void = {
 
 		if (command.cmd_type == command_type::HELP)
 			print_help();
+		if (command.cmd_type == command_type::EXIT)
+			break ;
 
 		for (let arg .. command.args) {
 			fmt::printfln("[{}]", arg)!;
