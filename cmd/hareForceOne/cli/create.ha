@@ -10,7 +10,10 @@ use os;
 use os::exec;
 use strings;
 
-const PROMPT = "hareForceOne $> ";
+const PROMPT = "hfo $> ";
+
+const NAME = "hareForceOne";
+const AUTHORS = "placeholder";
 
 type error = !(io::error | utf8::invalid);
 
@@ -80,6 +83,10 @@ fn build_cmd(words: []str) command = {
 	return cmd;
 };
 
+fn print_help() void = {
+	fmt::printfln("{} - by {}", NAME, AUTHORS)!;
+};
+
 fn cli_main() void = {
 	for (true) {
 		let words = match(read_line()) {
@@ -94,6 +101,10 @@ fn cli_main() void = {
 		defer free(words);
 
 		let command = build_cmd(words);
+		fmt::printfln("{}", len(command.args))!;
+
+		if (command.cmd_type == command_type::HELP)
+			print_help();
 
 		for (let arg .. command.args) {
 			fmt::printfln("[{}]", arg)!;
