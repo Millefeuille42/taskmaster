@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 )
 
-type CommandFunction func(*map[string]Config, []string, chan<- string) error
+type CommandFunction func(*map[string]Config, []string) error
 
 type Command struct {
 	Name     string
@@ -29,15 +30,17 @@ var commands = map[string]Command{
 	},
 }
 
-func list(configs *map[string]Config, args []string, output chan<- string) error {
+func list(configs *map[string]Config, args []string) error {
 	for _, config := range *configs {
-		output <- config.String() + "\n"
+		fmt.Println(config.String())
 	}
 	return nil
 }
 
-func reload(configs *map[string]Config, args []string, output chan<- string) error {
+func reload(configs *map[string]Config, args []string) error {
+	slog.Info("Reloading configuration")
 	*configs = parseConfig()
-	output <- "Reloaded config\n"
+	fmt.Println("Reloaded configuration")
+	slog.Info("Reloaded configuration")
 	return nil
 }

@@ -84,14 +84,15 @@ func runProgram(config Config) error {
 	return nil
 }
 
-func handleCommands(
-	configs *map[string]Config,
-	output chan<- string,
-	shutdown chan os.Signal,
-) {
+func tui(configs map[string]Config) {
+	shutdown := make(chan os.Signal)
+	defer close(shutdown)
 	reloadSignal := make(chan os.Signal)
-	signal.Notify(reloadSignal, syscall.SIGHUP)
 	defer close(reloadSignal)
+	signal.Notify(reloadSignal, syscall.SIGHUP)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	fmt.Println("Taskmaster TUI (Type 'help' for commands, 'exit' to quit)")
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -99,52 +100,33 @@ func handleCommands(
 		case <-shutdown:
 			return
 		case <-reloadSignal:
-			*configs = parseConfig()
+			configs = parseConfig()
 		default:
-			output <- "> "
+			fmt.Print("> ")
 			cmd, _ := reader.ReadString('\n')
 			args := strings.Split(strings.TrimSpace(cmd), " ")
 			cmd = args[0]
 			switch cmd {
 			case "help":
-				output <- "Available commands:\n"
+				fmt.Println("Available commands:")
+				fmt.Println("help: Print this help")
+				fmt.Println("exit: Shutdown " + os.Args[0])
 				for _, command := range commands {
-					output <- command.String() + "\n"
+					fmt.Println(command.String())
 				}
 			case "exit":
-				output <- "Exiting...\n"
+				fmt.Println("Exiting...")
 				shutdown <- os.Interrupt
 			default:
 				if command, ok := commands[cmd]; ok {
-					err := command.Function(configs, args, output)
+					err := command.Function(&configs, args)
 					if err != nil {
 						slog.Error(err.Error())
 					}
 					continue
 				}
-				output <- "Unknown command: " + cmd + "\n"
+				fmt.Println("Unknown command: " + cmd)
 			}
-		}
-	}
-}
-
-func tui(configs map[string]Config) {
-	output := make(chan string)
-	shutdown := make(chan os.Signal)
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-
-	defer close(output)
-	defer close(shutdown)
-
-	fmt.Println("Taskmaster TUI (Type 'help' for commands, 'exit' to quit)")
-
-	go handleCommands(&configs, output, shutdown)
-	for {
-		select {
-		case msg := <-output:
-			fmt.Print(msg)
-		case <-shutdown:
-			return
 		}
 	}
 }
