@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"log/slog"
@@ -82,7 +83,7 @@ func parseDirectory(dir string) (map[string]Config, error) {
 
 func parseConfig() map[string]Config {
 	allConfigs := make(map[string]Config)
-	for _, arg := range os.Args[1:] {
+	for _, arg := range flag.Args() {
 		fileInfo, err := os.Stat(arg)
 		if err != nil {
 			slog.Error(fmt.Sprintf("error accessing %s: %v", arg, err))

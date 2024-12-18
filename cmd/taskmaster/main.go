@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -116,6 +117,7 @@ func tui(configs map[string]Config) {
 				}
 			case "exit":
 				fmt.Println("Exiting...")
+				slog.Info("Received exit command, exiting...")
 				shutdown <- os.Interrupt
 			default:
 				if command, ok := commands[cmd]; ok {
@@ -131,13 +133,63 @@ func tui(configs map[string]Config) {
 	}
 }
 
-func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-	if len(os.Args) <= 1 {
-		slog.Error(fmt.Sprintf("usage: %s [file|directory]...", os.Args[0]))
+func parseFlags() func() error {
+	logLevel := flag.String("loglevel", "info", "Set the logging level (debug, info, warn, error)")
+	logFile := flag.String("logfile", "./taskmaster.log", "Optional file to write logs to")
+	flag.Parse()
+
+	var level slog.Level
+	switch *logLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		_, _ = fmt.Fprintf(os.Stderr, "Invalid log level: %s\n", *logLevel)
 		os.Exit(1)
 	}
 
+	var opts slog.HandlerOptions
+	opts.Level = level
+
+	var file *os.File
+	var closer = func() error { return nil }
+	if *logFile == "stdout" {
+		file = os.Stdout
+	} else if *logFile == "stderr" {
+		file = os.Stderr
+	} else {
+		var err error
+		file, err = os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
+			os.Exit(1)
+		}
+		closer = file.Close
+	}
+	logger := slog.New(slog.NewTextHandler(file, &opts))
+	slog.SetDefault(logger)
+	slog.Debug("parsing", slog.String("function", "parseFlags"), slog.String("logLevel", *logLevel))
+	slog.Debug("parsing", slog.String("function", "parseFlags"), slog.String("logFile", *logFile))
+	return closer
+}
+
+func main() {
+	loggerClose := parseFlags()
+	defer loggerClose()
+
+	slog.Debug("parsing", slog.String("function", "main"), slog.Int("flag.NArg()", flag.NArg()))
+	if flag.NArg() < 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	slog.Info("Starting Taskmaster")
 	configs := parseConfig()
+	slog.Info("Taskmaster started")
 	tui(configs)
 }
