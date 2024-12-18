@@ -7,87 +7,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 )
-
-func runProgram(config Config) error {
-	if config.Command == nil || len(config.Command) <= 0 {
-		return errors.New("no command provided")
-	}
-
-	var args []string
-	if len(config.Command) > 1 {
-		args = config.Command[1:]
-	}
-	cmd := exec.Command(config.Command[0], args...)
-	if cmd.Err != nil {
-		return cmd.Err
-	}
-
-	if config.Stdout != "" {
-		stdout, err := os.OpenFile(config.Stdout, os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		defer stdout.Close()
-		cmd.Stdout = stdout
-	}
-
-	if config.Stderr != "" {
-		stderr, err := os.OpenFile(config.Stderr, os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		defer stderr.Close()
-		cmd.Stderr = stderr
-	}
-
-	cmd.Dir = config.WorkDir
-	if config.Env != nil {
-		cmd.Env = os.Environ()
-		for key, value := range config.Env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-	slog.Debug(cmd.String())
-
-	syscall.Umask(config.Umask)
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-	wait := make(chan error)
-	go func(chan error) {
-		wait <- cmd.Wait()
-	}(wait)
-
-	startTime := time.NewTimer(config.StartTime * time.Second)
-	defer startTime.Stop()
-
-	select {
-	case err = <-wait:
-		if err != nil {
-			return err
-		}
-		slog.Info(fmt.Sprintf("%s: exited successfully", config.Command[0]))
-	case <-startTime.C:
-		if cmd.ProcessState.Exited() {
-			slog.Error(fmt.Sprintf("%s: started successfully", config.Command[0]))
-		} else {
-			slog.Info(fmt.Sprintf("%s: started successfully", config.Command[0]))
-		}
-	}
-
-	return nil
-}
 
 func handleCommand(cmd string, configs *map[string]Config) error {
 	args := strings.Split(strings.TrimSpace(cmd), " ")
 	cmd = args[0]
+	slog.Debug("executing command", slog.String("command", cmd))
 	switch cmd {
 	case "help":
 		fmt.Println("Available commands:")
@@ -129,6 +57,7 @@ func tui(configs map[string]Config) {
 			err := handleCommand(cmd, &configs)
 			if err != nil {
 				if errors.Is(err, os.ErrProcessDone) {
+					shutdown <- syscall.SIGINT
 					return
 				}
 				slog.Error(err.Error())

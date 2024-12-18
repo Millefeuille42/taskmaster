@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	name        string
+	pid         int
 	Command     []string          `yaml:"command"`
 	NumProcs    int               `yaml:"numprocs"`
 	AutoStart   bool              `yaml:"autostart"`
