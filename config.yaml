@@ -1,0 +1,40 @@
+my_program:
+  command:
+    - /usr/local/bin/nginx
+    - -c
+    - /etc/nginx/test.conf
+  numprocs: 2
+  autostart: true
+  restart_when: "unexpected"
+  exit_codes: [0, 2]
+  start_time: 5
+  stop_time: 10
+  max_restarts: 3
+  stop_signal: "TERM"
+  stdout: "/var/log/taskmaster/my_program.stdout"
+  stderr: "/var/log/taskmaster/my_program.stderr"
+  env:
+    LOG_LEVEL: "debug"
+    SERVICE: "web"
+  workdir: "/var/www"
+  umask: 022
+
+my_other_program:
+  command:
+    - /usr/bin/python3
+    - /opt/scripts/worker.py
+  numprocs: 1
+  autostart: false
+  restart_when: "always"
+  exit_codes: [0]
+  start_time: 10
+  stop_time: 20
+  max_restarts: 5
+  stop_signal: "QUIT"
+  stdout: "/var/log/my_other_program.stdout"
+  stderr: "/var/log/my_other_program.stderr"
+  env:
+    WORKER_MODE: "async"
+    DEBUG: "false"
+  workdir: "/opt"
+  umask: "027"
