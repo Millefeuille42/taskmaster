@@ -85,50 +85,66 @@ func runProgram(config Config) error {
 	return nil
 }
 
+func handleCommand(cmd string, configs *map[string]Config) error {
+	args := strings.Split(strings.TrimSpace(cmd), " ")
+	cmd = args[0]
+	switch cmd {
+	case "help":
+		fmt.Println("Available commands:")
+		fmt.Println("help: Print this help")
+		fmt.Println("exit: Shutdown " + os.Args[0])
+		for _, command := range commands {
+			fmt.Println(command.String())
+		}
+	case "exit":
+		fmt.Println("Exiting...")
+		slog.Info("Received exit command, exiting...")
+		return os.ErrProcessDone
+	default:
+		if command, ok := commands[cmd]; ok {
+			return command.Function(configs, args)
+		}
+		fmt.Println("Unknown command: " + cmd)
+	}
+
+	return nil
+}
+
 func tui(configs map[string]Config) {
+	input := make(chan string)
 	shutdown := make(chan os.Signal)
-	defer close(shutdown)
 	reloadSignal := make(chan os.Signal)
+	defer close(input)
+	defer close(shutdown)
 	defer close(reloadSignal)
-	signal.Notify(reloadSignal, syscall.SIGHUP)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(reloadSignal, syscall.SIGHUP)
 
 	fmt.Println("Taskmaster TUI (Type 'help' for commands, 'exit' to quit)")
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			fmt.Print("> ")
+			cmd, _ := reader.ReadString('\n')
+			err := handleCommand(cmd, &configs)
+			if err != nil {
+				if errors.Is(err, os.ErrProcessDone) {
+					return
+				}
+				slog.Error(err.Error())
+			}
+		}
+	}()
 
-	reader := bufio.NewReader(os.Stdin)
 	for {
 		select {
 		case <-shutdown:
+			slog.Debug("Received shutdown signal")
 			return
 		case <-reloadSignal:
+			slog.Debug("Received reload signal")
+			// TODO Make config thread safe
 			configs = parseConfig()
-		default:
-			fmt.Print("> ")
-			cmd, _ := reader.ReadString('\n')
-			args := strings.Split(strings.TrimSpace(cmd), " ")
-			cmd = args[0]
-			switch cmd {
-			case "help":
-				fmt.Println("Available commands:")
-				fmt.Println("help: Print this help")
-				fmt.Println("exit: Shutdown " + os.Args[0])
-				for _, command := range commands {
-					fmt.Println(command.String())
-				}
-			case "exit":
-				fmt.Println("Exiting...")
-				slog.Info("Received exit command, exiting...")
-				shutdown <- os.Interrupt
-			default:
-				if command, ok := commands[cmd]; ok {
-					err := command.Function(&configs, args)
-					if err != nil {
-						slog.Error(err.Error())
-					}
-					continue
-				}
-				fmt.Println("Unknown command: " + cmd)
-			}
 		}
 	}
 }
@@ -188,7 +204,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("Starting Taskmaster")
+	slog.Info("Starting Taskmaster", slog.Int("pid", os.Getpid()))
 	configs := parseConfig()
 	slog.Info("Taskmaster started")
 	tui(configs)
