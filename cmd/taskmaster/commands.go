@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type CommandFunction func(*map[string]Config, []string) error
+type CommandFunction func(chan<- Config, *map[string]Config, []string) error
 
 type Command struct {
 	Name     string
@@ -40,16 +40,26 @@ var commands = map[string]Command{
 		HelpText: "Stop programs",
 		Function: stop,
 	},
+	"status": {
+		Name:     "status",
+		HelpText: "Get status of a program",
+		Function: stat,
+	},
+	"ps": {
+		Name:     "ps",
+		HelpText: "List running programs",
+		Function: ps,
+	},
 }
 
-func list(configs *map[string]Config, _ []string) error {
+func list(_ chan<- Config, configs *map[string]Config, _ []string) error {
 	for _, config := range *configs {
 		fmt.Println(config.String())
 	}
 	return nil
 }
 
-func reload(configs *map[string]Config, _ []string) error {
+func reload(_ chan<- Config, configs *map[string]Config, _ []string) error {
 	slog.Info("Reloading configuration")
 	*configs = parseConfig()
 	fmt.Println("Reloaded configuration")
@@ -57,7 +67,52 @@ func reload(configs *map[string]Config, _ []string) error {
 	return nil
 }
 
-func start(configs *map[string]Config, args []string) error {
+func printProgramStatus(config Config) {
+	fmt.Printf("%s %s:\n", config.name, config.Command)
+	for pid, status := range config.pids {
+		programStatus := "running"
+		if !status.Running {
+			programStatus = "exited"
+			if status.ExitedEarly {
+				programStatus += " early"
+			}
+			programStatus += fmt.Sprintf(": %d", status.ExitCode)
+		}
+		fmt.Printf("\t%d (%s)\n", pid, programStatus)
+	}
+}
+
+func ps(_ chan<- Config, configs *map[string]Config, _ []string) error {
+	for _, config := range *configs {
+		if len(config.pids) <= 0 {
+			continue
+		}
+		printProgramStatus(config)
+	}
+	return nil
+}
+
+func stat(_ chan<- Config, configs *map[string]Config, args []string) error {
+	if len(args) < 2 {
+		return errors.New("usage: status <program>")
+	}
+	for _, arg := range args[1:] {
+		config, ok := (*configs)[arg]
+		if !ok {
+			_, _ = fmt.Fprintf(os.Stderr, "unknown program: %s\n", arg)
+			continue
+		}
+		if len(config.pids) <= 0 {
+			fmt.Println("not running")
+			continue
+		}
+		printProgramStatus(config)
+	}
+
+	return nil
+}
+
+func start(configChannel chan<- Config, configs *map[string]Config, args []string) error {
 	if len(args) < 2 {
 		return errors.New("usage: start <program>")
 	}
@@ -68,18 +123,17 @@ func start(configs *map[string]Config, args []string) error {
 			continue
 		}
 		go func() {
-			err := runProgram(&config)
+			err := runProgram(config, configChannel)
 			if err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, err)
 			}
-			(*configs)[arg] = config
 		}()
 	}
 
 	return nil
 }
 
-func stop(configs *map[string]Config, args []string) error {
+func stop(configChannel chan<- Config, configs *map[string]Config, args []string) error {
 	if len(args) < 2 {
 		return errors.New("usage: stop <program>")
 	}
@@ -92,11 +146,10 @@ func stop(configs *map[string]Config, args []string) error {
 		}
 		go func() {
 			slog.Debug("stop", slog.String("program", arg))
-			err := stopProgram(&config)
+			err := stopProgram(config, configChannel)
 			if err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, err)
 			}
-			(*configs)[arg] = config
 		}()
 	}
 

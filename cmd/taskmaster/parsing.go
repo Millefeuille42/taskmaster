@@ -11,9 +11,15 @@ import (
 	"time"
 )
 
+type ProgramStatus struct {
+	Running     bool
+	ExitedEarly bool
+	ExitCode    int
+}
+
 type Config struct {
 	name        string
-	pid         int
+	pids        map[int]ProgramStatus
 	Command     []string          `yaml:"command"`
 	NumProcs    int               `yaml:"numprocs"`
 	AutoStart   bool              `yaml:"autostart"`
@@ -107,6 +113,7 @@ func parseConfig() map[string]Config {
 		}
 		for key, config := range configs {
 			config.name = key
+			config.pids = make(map[int]ProgramStatus)
 			allConfigs[key] = config
 		}
 	}

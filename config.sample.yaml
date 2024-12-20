@@ -7,8 +7,8 @@ my_program:
   autostart: true
   restart_when: "unexpected"
   exit_codes: [0, 2]
-  start_time: 5
-  stop_time: 10
+  start_time: 5s
+  stop_time: 10s
   max_restarts: 3
   stop_signal: "TERM"
   stdout: "/var/log/taskmaster/my_program.stdout"
@@ -27,8 +27,8 @@ my_other_program:
   autostart: false
   restart_when: "always"
   exit_codes: [0]
-  start_time: 10
-  stop_time: 20
+  start_time: 10s
+  stop_time: 20s
   max_restarts: 5
   stop_signal: "QUIT"
   stdout: "/var/log/my_other_program.stdout"
