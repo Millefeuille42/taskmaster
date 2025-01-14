@@ -67,21 +67,6 @@ func reload(_ chan<- Config, configs *map[string]Config, _ []string) error {
 	return nil
 }
 
-func printProgramStatus(config Config) {
-	fmt.Printf("%s %s:\n", config.name, config.Command)
-	for pid, status := range config.pids {
-		programStatus := "running"
-		if !status.Running {
-			programStatus = "exited"
-			if status.ExitedEarly {
-				programStatus += " early"
-			}
-			programStatus += fmt.Sprintf(": %d", status.ExitCode)
-		}
-		fmt.Printf("\t%d (%s)\n", pid, programStatus)
-	}
-}
-
 func ps(_ chan<- Config, configs *map[string]Config, _ []string) error {
 	for _, config := range *configs {
 		if len(config.pids) <= 0 {
@@ -122,6 +107,7 @@ func start(configChannel chan<- Config, configs *map[string]Config, args []strin
 			_, _ = fmt.Fprintf(os.Stderr, "unknown program: %s\n", arg)
 			continue
 		}
+		// TODO Handle multiple procs
 		go func() {
 			err := runProgram(config, configChannel)
 			if err != nil {

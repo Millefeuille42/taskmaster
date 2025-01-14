@@ -148,66 +148,9 @@ func stopProgram(config Config, _ chan<- Config) error {
 		return nil
 	}
 
-	var stopSignal syscall.Signal
-	switch config.StopSignal {
-	case "ABRT":
-		stopSignal = syscall.SIGABRT
-	case "ALRM":
-		stopSignal = syscall.SIGALRM
-	case "BUS":
-		stopSignal = syscall.SIGBUS
-	case "CHLD":
-		stopSignal = syscall.SIGCHLD
-	case "CONT":
-		stopSignal = syscall.SIGCONT
-	case "FPE":
-		stopSignal = syscall.SIGFPE
-	case "HUP":
-		stopSignal = syscall.SIGHUP
-	case "ILL":
-		stopSignal = syscall.SIGILL
-	case "INT":
-		stopSignal = syscall.SIGINT
-	case "KILL":
-		stopSignal = syscall.SIGKILL
-	case "PIPE":
-		stopSignal = syscall.SIGPIPE
-	case "QUIT":
-		stopSignal = syscall.SIGQUIT
-	case "SEGV":
-		stopSignal = syscall.SIGSEGV
-	case "STOP":
-		stopSignal = syscall.SIGSTOP
-	case "TERM":
-		stopSignal = syscall.SIGTERM
-	case "TSTP":
-		stopSignal = syscall.SIGTSTP
-	case "TTIN":
-		stopSignal = syscall.SIGTTIN
-	case "TTOU":
-		stopSignal = syscall.SIGTTOU
-	case "USR1":
-		stopSignal = syscall.SIGUSR1
-	case "USR2":
-		stopSignal = syscall.SIGUSR2
-	case "POLL":
-		stopSignal = syscall.SIGPOLL
-	case "PROF":
-		stopSignal = syscall.SIGPROF
-	case "SYS":
-		stopSignal = syscall.SIGSYS
-	case "TRAP":
-		stopSignal = syscall.SIGTRAP
-	case "URG":
-		stopSignal = syscall.SIGURG
-	case "VTALRM":
-		stopSignal = syscall.SIGVTALRM
-	case "XCPU":
-		stopSignal = syscall.SIGXCPU
-	case "XFSZ":
-		stopSignal = syscall.SIGXFSZ
-	default:
-		return errors.New("invalid or unsupported signal: " + config.StopSignal)
+	stopSignal, err := stringToSignal(config.StopSignal)
+	if err != nil {
+		return err
 	}
 
 	for pid, _ := range config.pids {
@@ -217,7 +160,7 @@ func stopProgram(config Config, _ chan<- Config) error {
 			slog.String("signal", stopSignal.String()),
 			slog.Int("pid", pid),
 		)
-		err := syscall.Kill(pid, stopSignal)
+		err = syscall.Kill(pid, stopSignal)
 		if err != nil {
 			slog.Error("stop",
 				slog.String("error", err.Error()),
