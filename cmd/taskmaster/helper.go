@@ -3,12 +3,38 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"syscall"
 )
 
+func isExitCodeValid(config Config, status ProgramStatus) bool {
+	for _, code := range config.ExitCodes {
+		if code == status.ExitCode {
+			return true
+		}
+	}
+	return false
+}
+
+func startProc(config Config, configChannel chan<- Config) {
+	// TODO Check number of running procs
+	//  i.e only start the number of programs required to reach num_procs
+	for i := 1; i <= config.NumProcs; i++ {
+		go func() {
+			err := runProgram(config, configChannel)
+			if err != nil {
+				_, _ = fmt.Fprintln(os.Stderr, err)
+			}
+		}()
+	}
+}
+
 func printProgramStatus(config Config) {
-	// TODO Handle multiple procs
-	fmt.Printf("%s %s:\n", config.name, config.Command)
+	fmt.Printf("%s %s", config.name, config.Command)
+	if config.NumProcs > 1 {
+		fmt.Printf(" (%d)", config.NumProcs)
+	}
+	fmt.Println(":")
 	for pid, status := range config.pids {
 		programStatus := "running"
 		if !status.Running {

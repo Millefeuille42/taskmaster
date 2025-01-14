@@ -107,13 +107,7 @@ func start(configChannel chan<- Config, configs *map[string]Config, args []strin
 			_, _ = fmt.Fprintf(os.Stderr, "unknown program: %s\n", arg)
 			continue
 		}
-		// TODO Handle multiple procs
-		go func() {
-			err := runProgram(config, configChannel)
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, err)
-			}
-		}()
+		startProc(config, configChannel)
 	}
 
 	return nil

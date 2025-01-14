@@ -18,7 +18,11 @@ func programManager(
 ) {
 	configChannel := make(chan Config)
 
-	// TODO Handle autostart
+	for _, config := range configs {
+		if config.AutoStart {
+			startProc(config, configChannel)
+		}
+	}
 	for {
 		select {
 		case <-shutdown:
