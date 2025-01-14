@@ -50,22 +50,22 @@ func programManager(
 				if status.Running != false {
 					continue
 				}
+				delete(config.pids, pid)
 				if status.ExitCode == -1 {
 					// This means it has been stopped by a signal
 					//  thus it is highly possible that it has been shutdown
 					//  with the stop command
-					delete(config.pids, pid)
-					break
+					continue
 				}
-				if status.ExitedEarly == false {
-					for _, code := range config.ExitCodes {
-						if code == status.ExitCode {
-							delete(config.pids, pid)
-							break
-						}
+				if status.ExitedEarly || !isExitCodeValid(config, status) {
+					if config.RestartWhen == "unexpected" {
+						startProc(config, configChannel)
+						continue
 					}
 				}
-				// TODO handle erroneous exits
+				if config.RestartWhen == "always" {
+					startProc(config, configChannel)
+				}
 			}
 			configs[config.name] = config
 		}
