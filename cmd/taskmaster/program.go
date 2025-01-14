@@ -30,6 +30,7 @@ func programManager(
 			configs = parseConfig()
 			fmt.Println("Reloaded configuration")
 			slog.Info("Reloaded configuration")
+			// TODO Run new programs, shutdown old ones, etc
 		case args := <-command:
 			if cmd, ok := commands[args[0]]; ok {
 				err := cmd.Function(configChannel, &configs, args)
@@ -130,9 +131,7 @@ func runProgram(config Config, configChannel chan<- Config) error {
 	}
 	if err != nil {
 		slog.Error(fmt.Sprintf("%s: exited with error: %s", config.Command[0], err.Error()))
-		// TODO handle when stopped with stop command
 		configChannel <- config
-		return err
 	}
 	configChannel <- config
 	slog.Info(fmt.Sprintf("%s: exited successfully", config.Command[0]))
@@ -153,7 +152,7 @@ func stopProgram(config Config, _ chan<- Config) error {
 		return err
 	}
 
-	for pid, _ := range config.pids {
+	for pid := range config.pids {
 		slog.Debug(
 			"stop",
 			slog.String("program", config.name),
@@ -169,7 +168,7 @@ func stopProgram(config Config, _ chan<- Config) error {
 				slog.Int("pid", pid),
 			)
 		}
-
+		// TODO Wait for stop_time then kill
 	}
 	return nil
 }

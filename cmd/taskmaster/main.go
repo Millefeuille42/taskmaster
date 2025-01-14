@@ -27,7 +27,7 @@ func handleCommands(command chan<- []string, shutdown chan<- os.Signal) {
 		case "help":
 			fmt.Println("Available commands:")
 			fmt.Println("help: Print this help")
-			fmt.Println("exit: Shutdown " + os.Args[0])
+			fmt.Println("exit: Shutdown taskmaster")
 			for _, c := range commands {
 				fmt.Println(c.String())
 			}
