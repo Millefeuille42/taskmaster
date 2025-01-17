@@ -100,9 +100,10 @@ func stringToSignal(strSignal string) (syscall.Signal, error) {
 		signal = syscall.SIGUSR1
 	case "USR2":
 		signal = syscall.SIGUSR2
-		// TODO Adapt so it compiles on MacOs
-		//	case "POLL":
-		//		signal = syscall.SIGPOLL
+	case "POLL":
+		// Per spec, SIGPOLL is the same number as SIGIO
+		//  Doing this since syscall.SIGPOLL doesn't exist on macOS
+		signal = syscall.SIGIO
 	case "PROF":
 		signal = syscall.SIGPROF
 	case "SYS":
