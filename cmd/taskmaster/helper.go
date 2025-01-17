@@ -16,10 +16,18 @@ func isExitCodeValid(config Config, status ProgramStatus) bool {
 	return false
 }
 
+func countRunningPids(config Config) int {
+	count := 0
+	for _, pid := range config.pids {
+		if pid.Running {
+			count++
+		}
+	}
+	return count
+}
+
 func startProc(config Config, configChannel chan<- Config) {
-	// TODO Check number of running procs
-	//  i.e only start the number of programs required to reach num_procs
-	for i := 1; i <= config.NumProcs; i++ {
+	for i := countRunningPids(config); i <= config.NumProcs; i++ {
 		go func() {
 			err := runProgram(config, configChannel)
 			if err != nil {
