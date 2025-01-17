@@ -172,7 +172,25 @@ func stopProgram(config Config, _ chan<- Config) error {
 				slog.Int("pid", pid),
 			)
 		}
-		// TODO Wait for stop_time then kill
+		time.Sleep(config.StopTime)
+		// Kill 0 does nothing but still checks for errors
+		//  if there is no error, the process is still running
+		if err = syscall.Kill(pid, 0); err == nil {
+			slog.Warn("program did not exit cleanly, killing...",
+				slog.String("program", config.name),
+				slog.String("Time to wait", config.StopTime.String()),
+				slog.String("signal", stopSignal.String()),
+				slog.Int("pid", pid),
+			)
+			err = syscall.Kill(pid, syscall.SYS_KILL)
+			if err != nil {
+				slog.Error("could not kill program",
+					slog.String("program", config.name),
+					slog.String("error", err.Error()),
+					slog.Int("pid", pid),
+				)
+			}
+		}
 	}
 	return nil
 }
