@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 )
 
 type CommandFunction func(chan<- Config, *map[string]Config, []string) error
@@ -39,6 +40,11 @@ var commands = map[string]Command{
 		Name:     "stop",
 		HelpText: "Stop programs",
 		Function: stop,
+	},
+	"restart": {
+		Name:     "restart",
+		HelpText: "Restart programs",
+		Function: restart,
 	},
 	"status": {
 		Name:     "status",
@@ -134,4 +140,33 @@ func stop(configChannel chan<- Config, configs *map[string]Config, args []string
 	}
 
 	return nil
+}
+
+func restart(configChannel chan<- Config, configs *map[string]Config, args []string) error {
+	var waitGroup sync.WaitGroup
+
+	if len(args) < 2 {
+		return errors.New("usage: restart <program>")
+	}
+
+	for _, arg := range args[1:] {
+		config, ok := (*configs)[arg]
+		if !ok {
+			_, _ = fmt.Fprintf(os.Stderr, "unknown program: %s\n", arg)
+			continue
+		}
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			slog.Debug("stop", slog.String("program", arg))
+			err := stopProgram(config, configChannel)
+			if err != nil {
+				_, _ = fmt.Fprintln(os.Stderr, err)
+			}
+		}()
+	}
+
+	waitGroup.Wait()
+
+	return start(configChannel, configs, args)
 }
