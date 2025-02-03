@@ -15,6 +15,7 @@ func programManager(
 	shutdown <-chan os.Signal,
 	reloadSignal <-chan os.Signal,
 	command <-chan []string,
+	statusCommand chan<- string,
 ) {
 	configChannel := make(chan Config)
 
@@ -37,7 +38,7 @@ func programManager(
 			// TODO Run new programs, shutdown old ones, etc
 		case args := <-command:
 			if cmd, ok := commands[args[0]]; ok {
-				err := cmd.Function(configChannel, &configs, args)
+				err := cmd.Function(statusCommand, configChannel, &configs, args)
 				if err != nil {
 					slog.Error(err.Error(), slog.String("command", args[0]))
 				}

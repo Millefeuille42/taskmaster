@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -11,13 +12,23 @@ import (
 	"syscall"
 )
 
-func handleCommands(command chan<- []string, shutdown chan<- os.Signal) {
+func handleCommands(
+	command chan<- []string,
+	shutdown chan<- os.Signal,
+	statusCommand <-chan string,
+) {
 	fmt.Println("Taskmaster TUI (Type 'help' for commands, 'exit' to quit)")
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		fmt.Print("$> ")
 		cmd, err := reader.ReadString('\n')
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, err)
+			if err == io.EOF {
+				fmt.Println()
+			} else {
+				_, _ = fmt.Fprintln(os.Stderr, "error:", err)
+			}
+			shutdown <- syscall.SIGINT
 			break
 		}
 		args := strings.Split(strings.TrimSpace(cmd), " ")
@@ -38,6 +49,10 @@ func handleCommands(command chan<- []string, shutdown chan<- os.Signal) {
 			break
 		default:
 			command <- args
+			msg := <-statusCommand
+			if msg != "done" {
+				fmt.Println(msg)
+			}
 		}
 	}
 }
@@ -102,6 +117,7 @@ func main() {
 
 	command := make(chan []string)
 	shutdown := make(chan os.Signal)
+	statusCommand := make(chan string)
 	reloadSignal := make(chan os.Signal)
 	defer close(command)
 	defer close(shutdown)
@@ -109,7 +125,7 @@ func main() {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(reloadSignal, syscall.SIGHUP)
 
-	go handleCommands(command, shutdown)
+	go handleCommands(command, shutdown, statusCommand)
 	slog.Info("Taskmaster started")
-	programManager(configs, shutdown, reloadSignal, command)
+	programManager(configs, shutdown, reloadSignal, command, statusCommand)
 }

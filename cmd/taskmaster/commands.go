@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type CommandFunction func(chan<- Config, *map[string]Config, []string) error
+type CommandFunction func(chan<- string, chan<- Config, *map[string]Config, []string) error
 
 type Command struct {
 	Name     string
@@ -58,34 +58,59 @@ var commands = map[string]Command{
 	},
 }
 
-func list(_ chan<- Config, configs *map[string]Config, _ []string) error {
+func list(
+	statusCommand chan<- string,
+	_ chan<- Config,
+	configs *map[string]Config,
+	_ []string,
+) error {
 	for _, config := range *configs {
 		fmt.Println(config.String())
 	}
+	statusCommand <- "done"
 	return nil
 }
 
-func reload(_ chan<- Config, configs *map[string]Config, _ []string) error {
+func reload(
+	statusCommand chan<- string,
+	_ chan<- Config,
+	configs *map[string]Config,
+	_ []string,
+) error {
 	slog.Info("Reloading configuration")
 	*configs = parseConfig()
 	fmt.Println("Reloaded configuration")
 	slog.Info("Reloaded configuration")
+	statusCommand <- "done"
 	return nil
 }
 
-func ps(_ chan<- Config, configs *map[string]Config, _ []string) error {
+func ps(
+	statusCommand chan<- string,
+	_ chan<- Config,
+	configs *map[string]Config,
+	_ []string,
+) error {
 	for _, config := range *configs {
 		if len(config.pids) <= 0 {
 			continue
 		}
 		printProgramStatus(config)
 	}
+	statusCommand <- "done"
 	return nil
 }
 
-func stat(_ chan<- Config, configs *map[string]Config, args []string) error {
+func stat(
+	statusCommand chan<- string,
+	_ chan<- Config,
+	configs *map[string]Config,
+	args []string,
+) error {
 	if len(args) < 2 {
-		return errors.New("usage: status <program>")
+		error_msg := "usage: status <program>"
+		statusCommand <- error_msg
+		return errors.New(error_msg)
 	}
 	for _, arg := range args[1:] {
 		config, ok := (*configs)[arg]
@@ -100,12 +125,20 @@ func stat(_ chan<- Config, configs *map[string]Config, args []string) error {
 		printProgramStatus(config)
 	}
 
+	statusCommand <- "done"
 	return nil
 }
 
-func start(configChannel chan<- Config, configs *map[string]Config, args []string) error {
+func start(
+	statusCommand chan<- string,
+	configChannel chan<- Config,
+	configs *map[string]Config,
+	args []string,
+) error {
 	if len(args) < 2 {
-		return errors.New("usage: start <program>")
+		error_msg := "usage: start <program>"
+		statusCommand <- error_msg
+		return errors.New(error_msg)
 	}
 	for _, arg := range args[1:] {
 		config, ok := (*configs)[arg]
@@ -116,12 +149,20 @@ func start(configChannel chan<- Config, configs *map[string]Config, args []strin
 		startProc(config, configChannel)
 	}
 
+	statusCommand <- "done"
 	return nil
 }
 
-func stop(configChannel chan<- Config, configs *map[string]Config, args []string) error {
+func stop(
+	statusCommand chan<- string,
+	configChannel chan<- Config,
+	configs *map[string]Config,
+	args []string,
+) error {
 	if len(args) < 2 {
-		return errors.New("usage: stop <program>")
+		error_msg := "usage: stop <program>"
+		statusCommand <- error_msg
+		return errors.New(error_msg)
 	}
 
 	for _, arg := range args[1:] {
@@ -139,14 +180,22 @@ func stop(configChannel chan<- Config, configs *map[string]Config, args []string
 		}()
 	}
 
+	statusCommand <- "done"
 	return nil
 }
 
-func restart(configChannel chan<- Config, configs *map[string]Config, args []string) error {
+func restart(
+	statusCommand chan<- string,
+	configChannel chan<- Config,
+	configs *map[string]Config,
+	args []string,
+) error {
 	var waitGroup sync.WaitGroup
 
 	if len(args) < 2 {
-		return errors.New("usage: restart <program>")
+		error_msg := "usage: restart <program>"
+		statusCommand <- error_msg
+		return errors.New(error_msg)
 	}
 
 	for _, arg := range args[1:] {
@@ -168,5 +217,5 @@ func restart(configChannel chan<- Config, configs *map[string]Config, args []str
 
 	waitGroup.Wait()
 
-	return start(configChannel, configs, args)
+	return start(statusCommand, configChannel, configs, args)
 }
