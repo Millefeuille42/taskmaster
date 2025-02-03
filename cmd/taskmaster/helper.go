@@ -27,7 +27,7 @@ func countRunningPids(config Config) int {
 }
 
 func startProc(config Config, configChannel chan<- Config) {
-	for i := countRunningPids(config); i <= config.NumProcs; i++ {
+	for i := countRunningPids(config); i < config.NumProcs; i++ {
 		go func() {
 			err := runProgram(config, configChannel)
 			if err != nil {
