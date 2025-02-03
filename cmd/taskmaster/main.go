@@ -116,9 +116,9 @@ func main() {
 	configs := parseConfig()
 
 	command := make(chan []string)
-	shutdown := make(chan os.Signal)
+	shutdown := make(chan os.Signal, 1)
 	statusCommand := make(chan string)
-	reloadSignal := make(chan os.Signal)
+	reloadSignal := make(chan os.Signal, 1)
 	defer close(command)
 	defer close(shutdown)
 	defer close(reloadSignal)
