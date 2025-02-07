@@ -27,6 +27,7 @@ type Config struct {
 	ExitCodes   []int             `yaml:"exit_codes"`
 	StartTime   time.Duration     `yaml:"start_time"`
 	StopTime    time.Duration     `yaml:"stop_time"`
+	restart     int
 	MaxRestarts int               `yaml:"max_restarts"`
 	StopSignal  string            `yaml:"stop_signal"`
 	Stdout      string            `yaml:"stdout"`

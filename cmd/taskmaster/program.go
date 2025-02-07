@@ -58,6 +58,11 @@ func programManager(
 					//  with the stop command
 					continue
 				}
+				if config.restart >= config.MaxRestarts {
+					continue
+				} else {
+					config.restart += 1
+				}
 				if status.ExitedEarly || !isExitCodeValid(config, status) {
 					if config.RestartWhen == "unexpected" {
 						startProc(config, configChannel)

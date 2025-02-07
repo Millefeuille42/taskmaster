@@ -146,6 +146,7 @@ func start(
 			_, _ = fmt.Fprintf(os.Stderr, "unknown program: %s\n", arg)
 			continue
 		}
+		config.restart = 0
 		startProc(config, configChannel)
 	}
 
