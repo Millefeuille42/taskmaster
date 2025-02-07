@@ -1,0 +1,19 @@
+my_program:
+  command:
+    - tail
+    - -f
+  numprocs: 1
+  autostart: true
+  restart_when: "unexpected"
+  exit_codes: [0, 2]
+  start_time: 5s
+  stop_time: 10s
+  max_restarts: 3
+  stop_signal: "TERM"
+  stdout: "my_program.stdout"
+  stderr: "my_program.stderr"
+  env:
+    LOG_LEVEL: "debug"
+    SERVICE: "web"
+  workdir: "/home/vagrant"
+  umask: 022
