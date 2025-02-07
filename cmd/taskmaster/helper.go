@@ -7,6 +7,14 @@ import (
 	"syscall"
 )
 
+func clonePidsMap(src map[int]ProgramStatus) map[int]ProgramStatus {
+	new := make(map[int]ProgramStatus)
+	for key, value := range src {
+		new[key] = value
+	}
+	return new
+}
+
 func isExitCodeValid(config Config, status ProgramStatus) bool {
 	for _, code := range config.ExitCodes {
 		if code == status.ExitCode {

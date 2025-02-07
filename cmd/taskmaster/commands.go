@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"sync"
 )
 
@@ -71,14 +72,59 @@ func list(
 	return nil
 }
 
+// c'est bourin mais ça marche :^)
+func config_reconcilier(config Config, old_config Config, configChannel chan<- Config) {
+	if !reflect.DeepEqual(config.Command, old_config.Command) ||
+	   config.NumProcs < old_config.NumProcs ||
+	   config.Stdout != old_config.Stdout ||
+	   config.Stderr != old_config.Stderr ||
+	   !reflect.DeepEqual(config.Env, old_config.Env) ||
+	   config.WorkDir != old_config.WorkDir ||
+	   config.Umask != old_config.Umask {
+		stopProgram(old_config, configChannel)
+		startProc(config, configChannel)
+		return
+	}
+	if config.NumProcs > old_config.NumProcs {
+		startProc(config, configChannel)
+	}
+}
+
 func reload(
 	statusCommand chan<- string,
-	_ chan<- Config,
+	configChannel chan<- Config,
 	configs *map[string]Config,
 	_ []string,
 ) error {
 	slog.Info("Reloading configuration")
+
+	old_configs := *configs
 	*configs = parseConfig()
+
+	for name, config := range old_configs {
+		if (*configs)[name].name == "" {
+			// delete process
+			stopProgram(config, configChannel)
+		}
+	}
+
+	for name, config := range *configs {
+		if old_configs[name].name == "" {
+			// start process
+			if config.AutoStart {
+				startProc(config, configChannel)
+			}
+		} else {
+			slog.Info("AAAAAAAAAA")
+			// TODO: ca fonctionne po :c
+			// currently when the program reload it loose track of all the pids
+			// thought i would like try to copy them or sth, but doesnt work much
+			config.pids = clonePidsMap(old_configs[name].pids)
+			config_reconcilier(config, old_configs[name], configChannel)
+			// delete(*old_config, name)
+		}
+	}
+
 	fmt.Println("Reloaded configuration")
 	slog.Info("Reloaded configuration")
 	statusCommand <- "done"
