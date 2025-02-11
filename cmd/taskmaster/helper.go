@@ -8,11 +8,11 @@ import (
 )
 
 func clonePidsMap(src map[int]ProgramStatus) map[int]ProgramStatus {
-	new := make(map[int]ProgramStatus)
+	dst := make(map[int]ProgramStatus)
 	for key, value := range src {
-		new[key] = value
+		dst[key] = value
 	}
-	return new
+	return dst
 }
 
 func isExitCodeValid(config Config, status ProgramStatus) bool {
