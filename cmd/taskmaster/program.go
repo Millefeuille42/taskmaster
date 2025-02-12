@@ -11,20 +11,20 @@ import (
 	"time"
 )
 
-func processConfigDiff(config Config, old_config Config, configChannel chan<- Config) {
+func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Config) {
 	// c'est bourin mais ça marche :^)
-	if !reflect.DeepEqual(config.Command, old_config.Command) ||
-		config.NumProcs < old_config.NumProcs ||
-		config.Stdout != old_config.Stdout ||
-		config.Stderr != old_config.Stderr ||
-		!reflect.DeepEqual(config.Env, old_config.Env) ||
-		config.WorkDir != old_config.WorkDir ||
-		config.Umask != old_config.Umask {
-		stopProgram(old_config, configChannel)
+	if !reflect.DeepEqual(config.Command, oldConfig.Command) ||
+		config.NumProcs < oldConfig.NumProcs ||
+		config.Stdout != oldConfig.Stdout ||
+		config.Stderr != oldConfig.Stderr ||
+		!reflect.DeepEqual(config.Env, oldConfig.Env) ||
+		config.WorkDir != oldConfig.WorkDir ||
+		config.Umask != oldConfig.Umask {
+		stopProgram(oldConfig, configChannel)
 		startProc(config, configChannel)
 		return
 	}
-	if config.NumProcs > old_config.NumProcs {
+	if config.NumProcs > oldConfig.NumProcs {
 		startProc(config, configChannel)
 	}
 }
@@ -33,10 +33,10 @@ func handleReload(
 	configs *map[string]Config,
 	configChannel chan<- Config,
 ) (map[string]Config, error) {
-	old_configs := *configs
+	oldConfigs := *configs
 	*configs = parseConfig()
 
-	for name, config := range old_configs {
+	for name, config := range oldConfigs {
 		if (*configs)[name].name == "" {
 			// delete process
 			stopProgram(config, configChannel)
@@ -44,7 +44,7 @@ func handleReload(
 	}
 
 	for name, config := range *configs {
-		if old_configs[name].name == "" {
+		if oldConfigs[name].name == "" {
 			// start process
 			if config.AutoStart {
 				startProc(config, configChannel)
@@ -54,8 +54,8 @@ func handleReload(
 			// TODO: ca fonctionne po :c
 			// currently when the program reload it loose track of all the pids
 			// thought i would like try to copy them or sth, but doesnt work much
-			config.pids = clonePidsMap(old_configs[name].pids)
-			processConfigDiff(config, old_configs[name], configChannel)
+			config.pids = clonePidsMap(oldConfigs[name].pids)
+			processConfigDiff(config, oldConfigs[name], configChannel)
 			// delete(*old_config, name)
 		}
 	}

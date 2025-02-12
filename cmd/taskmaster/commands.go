@@ -112,9 +112,9 @@ func stat(
 	args []string,
 ) error {
 	if len(args) < 2 {
-		error_msg := "usage: status <program>"
-		statusCommand <- error_msg
-		return errors.New(error_msg)
+		errMsg := "usage: status <program>"
+		statusCommand <- errMsg
+		return errors.New(errMsg)
 	}
 	for _, arg := range args[1:] {
 		config, ok := (*configs)[arg]
@@ -140,9 +140,9 @@ func start(
 	args []string,
 ) error {
 	if len(args) < 2 {
-		error_msg := "usage: start <program>"
-		statusCommand <- error_msg
-		return errors.New(error_msg)
+		errMsg := "usage: start <program>"
+		statusCommand <- errMsg
+		return errors.New(errMsg)
 	}
 	for _, arg := range args[1:] {
 		config, ok := (*configs)[arg]
@@ -165,9 +165,9 @@ func stop(
 	args []string,
 ) error {
 	if len(args) < 2 {
-		error_msg := "usage: stop <program>"
-		statusCommand <- error_msg
-		return errors.New(error_msg)
+		errMsg := "usage: stop <program>"
+		statusCommand <- errMsg
+		return errors.New(errMsg)
 	}
 
 	for _, arg := range args[1:] {
@@ -198,9 +198,9 @@ func restart(
 	var waitGroup sync.WaitGroup
 
 	if len(args) < 2 {
-		error_msg := "usage: restart <program>"
-		statusCommand <- error_msg
-		return errors.New(error_msg)
+		errMsg := "usage: restart <program>"
+		statusCommand <- errMsg
+		return errors.New(errMsg)
 	}
 
 	for _, arg := range args[1:] {
