@@ -20,7 +20,12 @@ func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Con
 		!reflect.DeepEqual(config.Env, oldConfig.Env) ||
 		config.WorkDir != oldConfig.WorkDir ||
 		config.Umask != oldConfig.Umask {
-		stopProgram(oldConfig, configChannel)
+		if err := stopProgram(oldConfig, configChannel); err != nil {
+			slog.Error("An error occurred while stopping program",
+				slog.String("error", err.Error()),
+				slog.String("program", config.name),
+			)
+		}
 		startProc(config, configChannel)
 		return
 	}
@@ -39,7 +44,12 @@ func handleReload(
 	for name, config := range oldConfigs {
 		if (*configs)[name].name == "" {
 			// delete process
-			stopProgram(config, configChannel)
+			if err := stopProgram(config, configChannel); err != nil {
+				slog.Error("An error occurred while stopping program",
+					slog.String("error", err.Error()),
+					slog.String("program", config.name),
+				)
+			}
 		}
 	}
 
