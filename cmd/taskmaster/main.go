@@ -125,6 +125,7 @@ func main() {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(reloadSignal, syscall.SIGHUP)
 
+	populateCommands(reloadSignal)
 	go handleCommands(command, shutdown, statusCommand)
 	slog.Info("Taskmaster started")
 	programManager(configs, shutdown, reloadSignal, command, statusCommand)

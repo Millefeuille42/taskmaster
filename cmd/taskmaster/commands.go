@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"reflect"
 	"sync"
+	"syscall"
 )
 
 type CommandFunction func(chan<- string, chan<- Config, *map[string]Config, []string) error
@@ -21,42 +21,46 @@ func (c *Command) String() string {
 	return fmt.Sprintf("%s: %s", c.Name, c.HelpText)
 }
 
-var commands = map[string]Command{
-	"list": {
-		Name:     "list",
-		HelpText: "List programs configured and their options",
-		Function: list,
-	},
-	"reload": {
-		Name:     "reload",
-		HelpText: "Reload configuration",
-		Function: reload,
-	},
-	"start": {
-		Name:     "start",
-		HelpText: "Start programs",
-		Function: start,
-	},
-	"stop": {
-		Name:     "stop",
-		HelpText: "Stop programs",
-		Function: stop,
-	},
-	"restart": {
-		Name:     "restart",
-		HelpText: "Restart programs",
-		Function: restart,
-	},
-	"status": {
-		Name:     "status",
-		HelpText: "Get status of a program",
-		Function: stat,
-	},
-	"ps": {
-		Name:     "ps",
-		HelpText: "List running programs",
-		Function: ps,
-	},
+var commands map[string]Command
+
+func populateCommands(reloadSignal chan<- os.Signal) {
+	commands = map[string]Command{
+		"list": {
+			Name:     "list",
+			HelpText: "List programs configured and their options",
+			Function: list,
+		},
+		"reload": {
+			Name:     "reload",
+			HelpText: "Reload configuration",
+			Function: reloadFactory(reloadSignal),
+		},
+		"start": {
+			Name:     "start",
+			HelpText: "Start programs",
+			Function: start,
+		},
+		"stop": {
+			Name:     "stop",
+			HelpText: "Stop programs",
+			Function: stop,
+		},
+		"restart": {
+			Name:     "restart",
+			HelpText: "Restart programs",
+			Function: restart,
+		},
+		"status": {
+			Name:     "status",
+			HelpText: "Get status of a program",
+			Function: stat,
+		},
+		"ps": {
+			Name:     "ps",
+			HelpText: "List running programs",
+			Function: ps,
+		},
+	}
 }
 
 func list(
@@ -72,63 +76,17 @@ func list(
 	return nil
 }
 
-// c'est bourin mais ça marche :^)
-func config_reconcilier(config Config, old_config Config, configChannel chan<- Config) {
-	if !reflect.DeepEqual(config.Command, old_config.Command) ||
-	   config.NumProcs < old_config.NumProcs ||
-	   config.Stdout != old_config.Stdout ||
-	   config.Stderr != old_config.Stderr ||
-	   !reflect.DeepEqual(config.Env, old_config.Env) ||
-	   config.WorkDir != old_config.WorkDir ||
-	   config.Umask != old_config.Umask {
-		stopProgram(old_config, configChannel)
-		startProc(config, configChannel)
-		return
+func reloadFactory(reloadSignal chan<- os.Signal) CommandFunction {
+	return func(
+		statusCommand chan<- string,
+		_ chan<- Config,
+		_ *map[string]Config,
+		_ []string,
+	) error {
+		reloadSignal <- syscall.SIGHUP
+		statusCommand <- "done"
+		return nil
 	}
-	if config.NumProcs > old_config.NumProcs {
-		startProc(config, configChannel)
-	}
-}
-
-func reload(
-	statusCommand chan<- string,
-	configChannel chan<- Config,
-	configs *map[string]Config,
-	_ []string,
-) error {
-	slog.Info("Reloading configuration")
-
-	old_configs := *configs
-	*configs = parseConfig()
-
-	for name, config := range old_configs {
-		if (*configs)[name].name == "" {
-			// delete process
-			stopProgram(config, configChannel)
-		}
-	}
-
-	for name, config := range *configs {
-		if old_configs[name].name == "" {
-			// start process
-			if config.AutoStart {
-				startProc(config, configChannel)
-			}
-		} else {
-			slog.Info("AAAAAAAAAA")
-			// TODO: ca fonctionne po :c
-			// currently when the program reload it loose track of all the pids
-			// thought i would like try to copy them or sth, but doesnt work much
-			config.pids = clonePidsMap(old_configs[name].pids)
-			config_reconcilier(config, old_configs[name], configChannel)
-			// delete(*old_config, name)
-		}
-	}
-
-	fmt.Println("Reloaded configuration")
-	slog.Info("Reloaded configuration")
-	statusCommand <- "done"
-	return nil
 }
 
 func ps(

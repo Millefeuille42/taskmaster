@@ -6,9 +6,62 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"reflect"
 	"syscall"
 	"time"
 )
+
+func processConfigDiff(config Config, old_config Config, configChannel chan<- Config) {
+	// c'est bourin mais ça marche :^)
+	if !reflect.DeepEqual(config.Command, old_config.Command) ||
+		config.NumProcs < old_config.NumProcs ||
+		config.Stdout != old_config.Stdout ||
+		config.Stderr != old_config.Stderr ||
+		!reflect.DeepEqual(config.Env, old_config.Env) ||
+		config.WorkDir != old_config.WorkDir ||
+		config.Umask != old_config.Umask {
+		stopProgram(old_config, configChannel)
+		startProc(config, configChannel)
+		return
+	}
+	if config.NumProcs > old_config.NumProcs {
+		startProc(config, configChannel)
+	}
+}
+
+func handleReload(
+	configs *map[string]Config,
+	configChannel chan<- Config,
+) (map[string]Config, error) {
+	old_configs := *configs
+	*configs = parseConfig()
+
+	for name, config := range old_configs {
+		if (*configs)[name].name == "" {
+			// delete process
+			stopProgram(config, configChannel)
+		}
+	}
+
+	for name, config := range *configs {
+		if old_configs[name].name == "" {
+			// start process
+			if config.AutoStart {
+				startProc(config, configChannel)
+			}
+		} else {
+			slog.Info("AAAAAAAAAA")
+			// TODO: ca fonctionne po :c
+			// currently when the program reload it loose track of all the pids
+			// thought i would like try to copy them or sth, but doesnt work much
+			config.pids = clonePidsMap(old_configs[name].pids)
+			processConfigDiff(config, old_configs[name], configChannel)
+			// delete(*old_config, name)
+		}
+	}
+
+	return nil, nil
+}
 
 func programManager(
 	configs map[string]Config,
@@ -17,6 +70,7 @@ func programManager(
 	command <-chan []string,
 	statusCommand chan<- string,
 ) {
+	var err error
 	configChannel := make(chan Config)
 
 	for _, config := range configs {
@@ -32,13 +86,12 @@ func programManager(
 		case <-reloadSignal:
 			slog.Debug("Received reload signal")
 			slog.Info("Reloading configuration")
-			configs = parseConfig()
+			configs, err = handleReload(&configs, configChannel)
 			fmt.Println("Reloaded configuration")
 			slog.Info("Reloaded configuration")
-			// TODO Run new programs, shutdown old ones, etc
 		case args := <-command:
 			if cmd, ok := commands[args[0]]; ok {
-				err := cmd.Function(statusCommand, configChannel, &configs, args)
+				err = cmd.Function(statusCommand, configChannel, &configs, args)
 				if err != nil {
 					slog.Error(err.Error(), slog.String("command", args[0]))
 				}
