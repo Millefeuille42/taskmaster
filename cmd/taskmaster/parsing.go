@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -20,13 +21,13 @@ type ProgramStatus struct {
 type Config struct {
 	name        string
 	pids        map[int]ProgramStatus
-	Command     []string          `yaml:"command"`
-	NumProcs    int               `yaml:"numprocs"`
-	AutoStart   bool              `yaml:"autostart"`
-	RestartWhen string            `yaml:"restart_when"`
-	ExitCodes   []int             `yaml:"exit_codes"`
-	StartTime   time.Duration     `yaml:"start_time"`
-	StopTime    time.Duration     `yaml:"stop_time"`
+	Command     []string      `yaml:"command"`
+	NumProcs    int           `yaml:"numprocs"`
+	AutoStart   bool          `yaml:"autostart"`
+	RestartWhen string        `yaml:"restart_when"`
+	ExitCodes   []int         `yaml:"exit_codes"`
+	StartTime   time.Duration `yaml:"start_time"`
+	StopTime    time.Duration `yaml:"stop_time"`
 	restart     int
 	MaxRestarts int               `yaml:"max_restarts"`
 	StopSignal  string            `yaml:"stop_signal"`
@@ -39,6 +40,16 @@ type Config struct {
 
 func (c *Config) String() string {
 	return fmt.Sprintf("%s", c.name)
+}
+
+func (c *Config) HasCriticalChange(oldConfig Config) bool {
+	return !reflect.DeepEqual(c.Command, oldConfig.Command) ||
+		c.NumProcs < oldConfig.NumProcs ||
+		c.Stdout != oldConfig.Stdout ||
+		c.Stderr != oldConfig.Stderr ||
+		!reflect.DeepEqual(c.Env, oldConfig.Env) ||
+		c.WorkDir != oldConfig.WorkDir ||
+		c.Umask != oldConfig.Umask
 }
 
 func parseConfigFile(path string) (map[string]Config, error) {

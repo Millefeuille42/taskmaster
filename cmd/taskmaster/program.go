@@ -6,32 +6,20 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"reflect"
 	"syscall"
 	"time"
 )
 
 func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Config) {
-	// c'est bourin mais ça marche :^)
-	if !reflect.DeepEqual(config.Command, oldConfig.Command) ||
-		config.NumProcs < oldConfig.NumProcs ||
-		config.Stdout != oldConfig.Stdout ||
-		config.Stderr != oldConfig.Stderr ||
-		!reflect.DeepEqual(config.Env, oldConfig.Env) ||
-		config.WorkDir != oldConfig.WorkDir ||
-		config.Umask != oldConfig.Umask {
+	if config.HasCriticalChange(oldConfig) {
 		if err := stopProgram(oldConfig, configChannel); err != nil {
 			slog.Error("An error occurred while stopping program",
 				slog.String("error", err.Error()),
 				slog.String("program", config.name),
 			)
 		}
-		startProc(config, configChannel)
-		return
 	}
-	if config.NumProcs > oldConfig.NumProcs {
-		startProc(config, configChannel)
-	}
+	startProc(config, configChannel)
 }
 
 func handleReload(
@@ -42,8 +30,8 @@ func handleReload(
 	*configs = parseConfig()
 
 	for name, config := range oldConfigs {
+		// Stop programs that are not featured in the new config
 		if (*configs)[name].name == "" {
-			// delete process
 			if err := stopProgram(config, configChannel); err != nil {
 				slog.Error("An error occurred while stopping program",
 					slog.String("error", err.Error()),
@@ -54,20 +42,20 @@ func handleReload(
 	}
 
 	for name, config := range *configs {
-		if oldConfigs[name].name == "" {
-			// start process
-			if config.AutoStart {
-				startProc(config, configChannel)
-			}
-		} else {
-			slog.Info("AAAAAAAAAA")
-			// TODO: ca fonctionne po :c
-			// currently when the program reload it loose track of all the pids
-			// thought i would like try to copy them or sth, but doesnt work much
-			config.pids = clonePidsMap(oldConfigs[name].pids)
-			processConfigDiff(config, oldConfigs[name], configChannel)
-			// delete(*old_config, name)
+		// Start new autostart programs
+		if oldConfigs[name].name == "" && config.AutoStart {
+			startProc(config, configChannel)
+			continue
 		}
+		// If the program is already featured in the config
+		//  check if any critical element has changed and restart it if so
+		slog.Info("AAAAAAAAAA")
+		// TODO: ca fonctionne po :c
+		// currently when the program reload it loose track of all the pids
+		// thought i would like try to copy them or sth, but doesnt work much
+		config.pids = clonePidsMap(oldConfigs[name].pids)
+		processConfigDiff(config, oldConfigs[name], configChannel)
+		// delete(*old_config, name)
 	}
 
 	return nil, nil
