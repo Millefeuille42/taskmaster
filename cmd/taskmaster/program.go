@@ -80,8 +80,7 @@ func programManager(
 		case <-reloadSignal:
 			slog.Debug("Received reload signal")
 			slog.Info("Reloading configuration")
-			configs, err = handleReload(&configs, configChannel)
-			fmt.Println("Reloaded configuration")
+			configs = handleReload(configs, configChannel)
 			slog.Info("Reloaded configuration")
 		case args := <-command:
 			if cmd, ok := commands[args[0]]; ok {
@@ -91,7 +90,7 @@ func programManager(
 				}
 				continue
 			}
-			fmt.Println("Unknown command: " + args[0])
+			statusCommand <- "Unknown command: " + args[0]
 		case config := <-configChannel:
 			pids := config.pids
 			for pid, status := range pids {

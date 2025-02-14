@@ -72,7 +72,7 @@ func list(
 	for _, config := range *configs {
 		fmt.Println(config.String())
 	}
-	statusCommand <- "done"
+	statusCommand <- CommandDone
 	return nil
 }
 
@@ -84,7 +84,7 @@ func reloadFactory(reloadSignal chan<- os.Signal) CommandFunction {
 		_ []string,
 	) error {
 		reloadSignal <- syscall.SIGHUP
-		statusCommand <- "done"
+		statusCommand <- CommandDone
 		return nil
 	}
 }
@@ -101,7 +101,7 @@ func ps(
 		}
 		printProgramStatus(config)
 	}
-	statusCommand <- "done"
+	statusCommand <- CommandDone
 	return nil
 }
 
@@ -129,7 +129,7 @@ func stat(
 		printProgramStatus(config)
 	}
 
-	statusCommand <- "done"
+	statusCommand <- CommandDone
 	return nil
 }
 
@@ -154,7 +154,7 @@ func start(
 		startProc(config, configChannel)
 	}
 
-	statusCommand <- "done"
+	statusCommand <- CommandDone
 	return nil
 }
 
@@ -185,7 +185,7 @@ func stop(
 		}()
 	}
 
-	statusCommand <- "done"
+	statusCommand <- CommandDone
 	return nil
 }
 

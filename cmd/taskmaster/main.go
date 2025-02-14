@@ -12,6 +12,8 @@ import (
 	"syscall"
 )
 
+const CommandDone = "done"
+
 func handleCommands(
 	command chan<- []string,
 	shutdown chan<- os.Signal,
@@ -50,7 +52,7 @@ func handleCommands(
 		default:
 			command <- args
 			msg := <-statusCommand
-			if msg != "done" {
+			if msg != CommandDone {
 				fmt.Println(msg)
 			}
 		}
