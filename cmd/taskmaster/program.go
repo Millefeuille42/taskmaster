@@ -49,13 +49,9 @@ func handleReload(
 		}
 		// If the program is already featured in the config
 		//  check if any critical element has changed and restart it if so
-		slog.Info("AAAAAAAAAA")
-		// TODO: ca fonctionne po :c
-		// currently when the program reload it loose track of all the pids
-		// thought i would like try to copy them or sth, but doesnt work much
 		config.pids = clonePidsMap(oldConfigs[name].pids)
 		processConfigDiff(config, oldConfigs[name], configChannel)
-		// delete(*old_config, name)
+		configs[name] = config
 	}
 
 	return configs
