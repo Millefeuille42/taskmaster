@@ -23,15 +23,15 @@ func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Con
 }
 
 func handleReload(
-	configs *map[string]Config,
+	configs map[string]Config,
 	configChannel chan<- Config,
-) (map[string]Config, error) {
-	oldConfigs := *configs
-	*configs = parseConfig()
+) map[string]Config {
+	oldConfigs := configs
+	configs = parseConfig()
 
 	for name, config := range oldConfigs {
 		// Stop programs that are not featured in the new config
-		if (*configs)[name].name == "" {
+		if configs[name].name == "" {
 			if err := stopProgram(config, configChannel); err != nil {
 				slog.Error("An error occurred while stopping program",
 					slog.String("error", err.Error()),
@@ -41,7 +41,7 @@ func handleReload(
 		}
 	}
 
-	for name, config := range *configs {
+	for name, config := range configs {
 		// Start new autostart programs
 		if oldConfigs[name].name == "" && config.AutoStart {
 			startProc(config, configChannel)
@@ -58,7 +58,7 @@ func handleReload(
 		// delete(*old_config, name)
 	}
 
-	return nil, nil
+	return configs
 }
 
 func programManager(
