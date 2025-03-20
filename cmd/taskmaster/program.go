@@ -262,6 +262,7 @@ func stopProgram(config Config, _ chan<- Config) error {
 		return err
 	}
 
+	config.lock.Lock()
 	for pid := range config.pids {
 		slog.Info(
 			"stop",
@@ -298,5 +299,6 @@ func stopProgram(config Config, _ chan<- Config) error {
 			}
 		}
 	}
+	config.lock.Unlock()
 	return nil
 }

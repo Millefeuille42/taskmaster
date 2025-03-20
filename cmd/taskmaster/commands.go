@@ -98,6 +98,7 @@ func ps(
 	for _, config := range *configs {
 		config.lock.Lock()
 		if len(config.pids) <= 0 {
+			config.lock.Unlock()
 			continue
 		}
 		config.lock.Unlock()
