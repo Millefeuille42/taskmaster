@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -36,6 +37,7 @@ type Config struct {
 	Env         map[string]string `yaml:"env"`
 	WorkDir     string            `yaml:"workdir"`
 	Umask       int               `yaml:"umask"`
+	lock        *sync.Mutex
 }
 
 func (c *Config) String() string {
@@ -126,6 +128,7 @@ func parseConfig() map[string]Config {
 		for key, config := range configs {
 			config.name = key
 			config.pids = make(map[int]ProgramStatus)
+			config.lock = new(sync.Mutex)
 			allConfigs[key] = config
 		}
 	}

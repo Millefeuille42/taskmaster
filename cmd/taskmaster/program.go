@@ -49,7 +49,9 @@ func handleReload(
 		}
 		// If the program is already featured in the config
 		//  check if any critical element has changed and restart it if so
+		config.lock.Lock()
 		config.pids = clonePidsMap(oldConfigs[name].pids)
+		config.lock.Unlock()
 		processConfigDiff(config, oldConfigs[name], configChannel)
 		configs[name] = config
 	}
@@ -93,6 +95,7 @@ func programManager(
 			statusCommand <- "Unknown command: " + args[0]
 		case config := <-configChannel:
 			pids := config.pids
+			config.lock.Lock()
 			for pid, status := range pids {
 				if status.Running != false {
 					continue
@@ -111,14 +114,19 @@ func programManager(
 				}
 				if status.ExitedEarly || !isExitCodeValid(config, status) {
 					if config.RestartWhen == "unexpected" {
+						config.lock.Unlock()
 						startProc(config, configChannel)
+						config.lock.Lock()
 						continue
 					}
 				}
 				if config.RestartWhen == "always" {
+					config.lock.Unlock()
 					startProc(config, configChannel)
+					config.lock.Lock()
 				}
 			}
+			config.lock.Unlock()
 			configs[config.name] = config
 		}
 	}
@@ -171,11 +179,13 @@ func runProgram(config Config, configChannel chan<- Config) error {
 		return err
 	}
 	pid := cmd.Process.Pid
+	config.lock.Lock()
 	config.pids[pid] = ProgramStatus{
 		Running:     true,
 		ExitedEarly: false,
 		ExitCode:    0,
 	}
+	config.lock.Unlock()
 	configChannel <- config
 
 	startTime := time.Now().Add(config.StartTime)
@@ -185,6 +195,9 @@ func runProgram(config Config, configChannel chan<- Config) error {
 		ExitedEarly: time.Now().Before(startTime),
 		ExitCode:    cmd.ProcessState.ExitCode(),
 	}
+	config.lock.Lock()
+	config.pids[pid] = status
+	config.lock.Unlock()
 	if err != nil {
 		slog.Error(fmt.Sprintf("%s: exited with error: %s", config.Command[0], err.Error()))
 		configChannel <- config

@@ -96,9 +96,11 @@ func ps(
 	_ []string,
 ) error {
 	for _, config := range *configs {
+		config.lock.Lock()
 		if len(config.pids) <= 0 {
 			continue
 		}
+		config.lock.Unlock()
 		printProgramStatus(config)
 	}
 	statusCommand <- CommandDone
