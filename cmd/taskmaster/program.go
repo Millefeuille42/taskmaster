@@ -264,40 +264,42 @@ func stopProgram(config Config, _ chan<- Config) error {
 
 	config.lock.Lock()
 	for pid := range config.pids {
-		slog.Info(
-			"stop",
-			slog.String("program", config.name),
-			slog.String("signal", stopSignal.String()),
-			slog.Int("pid", pid),
-		)
-		err = syscall.Kill(pid, stopSignal)
-		if err != nil {
-			slog.Error("stop",
-				slog.String("error", err.Error()),
+		go func() {
+			slog.Info(
+				"stop",
 				slog.String("program", config.name),
 				slog.String("signal", stopSignal.String()),
 				slog.Int("pid", pid),
 			)
-		}
-		time.Sleep(config.StopTime)
-		// Kill 0 does nothing but still checks for errors
-		//  if there is no error, the process is still running
-		if err = syscall.Kill(pid, 0); err == nil {
-			slog.Warn("program did not exit cleanly, killing...",
-				slog.String("program", config.name),
-				slog.String("Time to wait", config.StopTime.String()),
-				slog.String("signal", stopSignal.String()),
-				slog.Int("pid", pid),
-			)
-			err = syscall.Kill(pid, syscall.SYS_KILL)
+			err = syscall.Kill(pid, stopSignal)
 			if err != nil {
-				slog.Error("could not kill program",
-					slog.String("program", config.name),
+				slog.Error("stop",
 					slog.String("error", err.Error()),
+					slog.String("program", config.name),
+					slog.String("signal", stopSignal.String()),
 					slog.Int("pid", pid),
 				)
 			}
-		}
+			time.Sleep(config.StopTime)
+			// Kill 0 does nothing but still checks for errors
+			//  if there is no error, the process is still running
+			if err = syscall.Kill(pid, 0); err == nil {
+				slog.Warn("program did not exit cleanly, killing...",
+					slog.String("program", config.name),
+					slog.String("Time to wait", config.StopTime.String()),
+					slog.String("signal", stopSignal.String()),
+					slog.Int("pid", pid),
+				)
+				err = syscall.Kill(pid, syscall.SYS_KILL)
+				if err != nil {
+					slog.Error("could not kill program",
+						slog.String("program", config.name),
+						slog.String("error", err.Error()),
+						slog.Int("pid", pid),
+					)
+				}
+			}
+		}()
 	}
 	config.lock.Unlock()
 	return nil
