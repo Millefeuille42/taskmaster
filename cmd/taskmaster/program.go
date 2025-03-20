@@ -99,13 +99,14 @@ func programManager(
 			}
 			statusCommand <- "Unknown command: " + args[0]
 		case config := <-configChannel:
+			oldConf := configs[config.name]
 			pids := config.pids
 			config.lock.Lock()
 			for pid, status := range pids {
 				if status.Running != false {
 					continue
 				}
-				delete(config.pids, pid)
+				delete(oldConf.pids, pid)
 				if status.ExitCode == -1 {
 					// This means it has been stopped by a signal
 					//  thus it is highly possible that it has been shutdown
@@ -131,7 +132,7 @@ func programManager(
 					)
 					continue
 				} else {
-					config.restart += 1
+					oldConf.restart += 1
 				}
 				if status.ExitedEarly || !isExitCodeValid(config, status) {
 					slog.Warn("Program has stopped unexpectedly",
@@ -160,7 +161,7 @@ func programManager(
 				}
 			}
 			config.lock.Unlock()
-			configs[config.name] = config
+			configs[config.name] = oldConf
 		}
 	}
 }
