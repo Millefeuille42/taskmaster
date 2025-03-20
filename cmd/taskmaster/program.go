@@ -108,12 +108,25 @@ func programManager(
 					continue
 				}
 				if config.restart >= config.MaxRestarts {
+					slog.Warn("Program has reached max number of restarts",
+						slog.Int("maxRestarts", config.MaxRestarts),
+						slog.Int("restarts", config.restart),
+						slog.String("program", config.name),
+					)
 					continue
 				} else {
 					config.restart += 1
 				}
 				if status.ExitedEarly || !isExitCodeValid(config, status) {
+					slog.Warn("Program has stopped unexpectedly",
+						slog.Int("", status.ExitCode),
+						slog.String("program", config.name),
+					)
 					if config.RestartWhen == "unexpected" {
+						slog.Info("Restarting program",
+							slog.String("program", config.name),
+							slog.Int("restarts", config.restart),
+						)
 						config.lock.Unlock()
 						startProc(config, configChannel)
 						config.lock.Lock()
@@ -121,6 +134,10 @@ func programManager(
 					}
 				}
 				if config.RestartWhen == "always" {
+					slog.Info("Restarting program",
+						slog.String("program", config.name),
+						slog.Int("restarts", config.restart),
+					)
 					config.lock.Unlock()
 					startProc(config, configChannel)
 					config.lock.Lock()
@@ -189,6 +206,11 @@ func runProgram(config Config, configChannel chan<- Config) error {
 	configChannel <- config
 
 	startTime := time.Now().Add(config.StartTime)
+	slog.Info("Starting program",
+		slog.String("program", config.name),
+		slog.String("command", strings.Join(cmd.Args, " ")),
+		slog.Int("pid", pid),
+	)
 	err = cmd.Wait()
 	config.pids[pid] = ProgramStatus{
 		Running:     false,
@@ -222,7 +244,7 @@ func stopProgram(config Config, _ chan<- Config) error {
 	}
 
 	for pid := range config.pids {
-		slog.Debug(
+		slog.Info(
 			"stop",
 			slog.String("program", config.name),
 			slog.String("signal", stopSignal.String()),

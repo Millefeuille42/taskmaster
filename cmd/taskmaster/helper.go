@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"syscall"
 )
@@ -39,6 +40,10 @@ func startProc(config Config, configChannel chan<- Config) {
 		go func() {
 			err := runProgram(config, configChannel)
 			if err != nil {
+				slog.Error("could not start program",
+					slog.String("program", config.name),
+					slog.String("error", err.Error()),
+				)
 				_, _ = fmt.Fprintln(os.Stderr, err)
 			}
 		}()
