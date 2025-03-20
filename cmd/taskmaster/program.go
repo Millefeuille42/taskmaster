@@ -20,12 +20,16 @@ func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Con
 				slog.String("program", config.name),
 			)
 		}
-		startProc(config, configChannel)
-		return
 	}
-	if config.AutoStart || (config.NumProcs > oldConfig.NumProcs && len(config.pids) > 0) {
-		startProc(config, configChannel)
-	}
+
+	go func() {
+		if config.AutoStart || len(oldConfig.pids) > 0 {
+			slog.Debug("Waiting for graceful shutdown time before starting programs")
+			time.Sleep(config.StopTime)
+			slog.Debug("Starting programs")
+			startProc(config, configChannel)
+		}
+	}()
 }
 
 func handleReload(
