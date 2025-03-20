@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -18,8 +19,12 @@ func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Con
 				slog.String("program", config.name),
 			)
 		}
+		startProc(config, configChannel)
+		return
 	}
-	startProc(config, configChannel)
+	if config.AutoStart || (config.NumProcs > oldConfig.NumProcs && len(config.pids) > 0) {
+		startProc(config, configChannel)
+	}
 }
 
 func handleReload(
