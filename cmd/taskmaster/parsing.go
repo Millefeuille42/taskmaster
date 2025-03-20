@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type ProgramStatus struct {
 	Running     bool
 	ExitedEarly bool
 	ExitCode    int
+	SysStatus   syscall.WaitStatus
 }
 
 type Config struct {

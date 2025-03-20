@@ -105,7 +105,18 @@ func programManager(
 					// This means it has been stopped by a signal
 					//  thus it is highly possible that it has been shutdown
 					//  with the stop command
-					continue
+					stopSignal, _ := stringToSignal(config.StopSignal)
+					if int(status.SysStatus) == int(stopSignal) {
+						slog.Warn("Program has been stopped by TUI",
+							slog.String("program", config.name),
+						)
+						continue
+					}
+					slog.Warn("Program has been stopped by an invalid signal",
+						slog.Int("signal", int(stopSignal)),
+						slog.Int("expected signal", int(status.SysStatus)),
+						slog.String("program", config.name),
+					)
 				}
 				if config.restart >= config.MaxRestarts {
 					slog.Warn("Program has reached max number of restarts",
@@ -212,10 +223,13 @@ func runProgram(config Config, configChannel chan<- Config) error {
 		slog.Int("pid", pid),
 	)
 	err = cmd.Wait()
-	config.pids[pid] = ProgramStatus{
+	status := ProgramStatus{
 		Running:     false,
 		ExitedEarly: time.Now().Before(startTime),
 		ExitCode:    cmd.ProcessState.ExitCode(),
+	}
+	if waitStatus, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
+		status.SysStatus = waitStatus
 	}
 	config.lock.Lock()
 	config.pids[pid] = status
