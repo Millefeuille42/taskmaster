@@ -13,7 +13,7 @@ import (
 
 func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Config) {
 	if config.HasCriticalChange(oldConfig) {
-		if err := stopProgram(oldConfig, configChannel); err != nil {
+		slog.Debug("Config has critical change")
 		if err := stopProgram(config, configChannel); err != nil {
 			slog.Error("An error occurred while stopping program",
 				slog.String("error", err.Error()),
@@ -42,6 +42,7 @@ func handleReload(
 	for name, config := range oldConfigs {
 		// Stop programs that are not featured in the new config
 		if configs[name].name == "" {
+			slog.Debug("Removing old config program", slog.String("program", name))
 			if err := stopProgram(config, configChannel); err != nil {
 				slog.Error("An error occurred while stopping program",
 					slog.String("error", err.Error()),
@@ -120,6 +121,7 @@ func programManager(
 					if int(status.SysStatus) == int(stopSignal) {
 						slog.Warn("Program has been stopped by TUI",
 							slog.String("program", config.name),
+							slog.Int("pid", pid),
 						)
 						continue
 					}
