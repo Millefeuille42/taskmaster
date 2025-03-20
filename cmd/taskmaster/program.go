@@ -14,6 +14,7 @@ import (
 func processConfigDiff(config Config, oldConfig Config, configChannel chan<- Config) {
 	if config.HasCriticalChange(oldConfig) {
 		if err := stopProgram(oldConfig, configChannel); err != nil {
+		if err := stopProgram(config, configChannel); err != nil {
 			slog.Error("An error occurred while stopping program",
 				slog.String("error", err.Error()),
 				slog.String("program", config.name),
