@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type CommandFunction func(chan<- string, chan<- Config, *map[string]Config, []string) error
@@ -225,5 +226,16 @@ func restart(
 
 	waitGroup.Wait()
 
-	return start(statusCommand, configChannel, configs, args)
+	for _, arg := range args[1:] {
+		config, ok := (*configs)[arg]
+		time.Sleep(config.StopTime)
+		if !ok {
+			continue
+		}
+		config.restart = 0
+		startProc(config, configChannel)
+	}
+
+	statusCommand <- CommandDone
+	return nil
 }
