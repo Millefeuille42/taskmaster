@@ -143,7 +143,7 @@ func programManager(
 				}
 				if status.ExitedEarly || !isExitCodeValid(config, status) {
 					slog.Warn("Program has stopped unexpectedly",
-						slog.Int("", status.ExitCode),
+						slog.Int("exit code", status.ExitCode),
 						slog.String("program", config.name),
 					)
 					if config.RestartWhen == "unexpected" {
@@ -250,6 +250,7 @@ func runProgram(config Config, configChannel chan<- Config) error {
 	if err != nil {
 		slog.Error(fmt.Sprintf("%s: exited with error: %s", config.Command[0], err.Error()))
 		configChannel <- config
+		return nil
 	}
 	configChannel <- config
 	slog.Info(fmt.Sprintf("%s: exited successfully", config.Command[0]))
