@@ -131,7 +131,7 @@ func programManager(
 						slog.String("program", config.name),
 					)
 				}
-				if config.restart >= config.MaxRestarts {
+				if oldConf.restart >= config.MaxRestarts {
 					slog.Warn("Program has reached max number of restarts",
 						slog.Int("maxRestarts", config.MaxRestarts),
 						slog.Int("restarts", config.restart),
